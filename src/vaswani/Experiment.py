@@ -9,10 +9,11 @@ index_ref = pt.IndexRef.of('./indices/vaswani') # assumes you have already built
 pipeline = pt.BatchRetrieve(index_ref, wmodel='BM25')
 
 sdm = pt.rewrite.SequentialDependence()
+sdm1 = pt.rewrite.SequentialDependence(prox_model='org.terrier.matching.models.Tf')
 bo1 = pt.rewrite.Bo1QueryExpansion(index_ref)
 
 pipeline1 = sdm >> pipeline
-
+pipeline2 = sdm1 >> pipeline
 
 # Queryleri al
 topics = dataset.get_topics()
@@ -35,14 +36,6 @@ result = pt.Experiment(
 print("dümdüz:")
 print(result)
 print("---------------")
-result = pt.Experiment(
-    [pipeline],
-    processed_topics,
-    dataset.get_qrels(),
-    [MAP, nDCG@20]
-)
-print("processed query:")
-print(result)
 print("---------------")
 result = pt.Experiment(
     [pipeline1],
@@ -53,11 +46,13 @@ result = pt.Experiment(
 print("pipeline1:")
 print(result)
 print("---------------")
+print("---------------")
 result = pt.Experiment(
-    [pipeline1],
-    processed_topics,
+    [pipeline2],
+    dataset.get_topics(),
     dataset.get_qrels(),
     [MAP, nDCG@20]
 )
-print("pipeline1 ve processed query :")
+print("pipeline1:")
 print(result)
+print("---------------")
