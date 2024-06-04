@@ -1,16 +1,17 @@
 import tkinter as tk
 from tkinter import messagebox
-import os
+from PyTerrierSearch import PyTerrierSearch  # PyTerrierSearch sınıfını içe aktar
+
+# PyTerrierSearch örneğini başlat
+index_path = './indices/dpr-w100-small'
+dataset_name = "irds:dpr-w100"
+pt_search = PyTerrierSearch(index_path, dataset_name)
 
 def search(query_str):
     '''
-    ix = open_dir("indexdir")
-    with ix.searcher(weighting=scoring.BM25F()) as searcher:
-        query = QueryParser("content", ix.schema).parse(query_str)
-        results = searcher.search(query, limit=10)
-        return [result['content'] for result in results]
-	'''
-    return ["Result 1", "Result 2", "Result 3", "Result 2", "Result 3", "Result 2", "Result 3", "Result 2", "Result 3", "Result 2", "Result 3", "Result 2", "Result 3"]
+    PyTerrierSearch sınıfının search fonksiyonunu çağır ve sonuçları döndür
+    '''
+    return pt_search.search(query_str)
 
 def on_search():
     query = search_entry.get()
@@ -22,10 +23,11 @@ def on_search():
     result_text.delete(1.0, tk.END)
     if results:
         for result in results:
-            result_text.insert(tk.END, result + "\n\n")
+            result_text.insert(tk.END, f"Doc ID: {result['doc_id']}\n")
+            result_text.insert(tk.END, f"Title: {result['title']}\n")
+            result_text.insert(tk.END, f"Text: {result['text']}\n\n")
     else:
         result_text.insert(tk.END, "No results found.")
-
 
 root = tk.Tk()
 root.title("BM25 Search Engine")

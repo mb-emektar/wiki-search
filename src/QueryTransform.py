@@ -1,4 +1,5 @@
 import nltk
+import re
 import string
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
@@ -10,6 +11,21 @@ class QueryTransform:
         nltk.download('stopwords')
         self.stemmer = PorterStemmer()
         self.stop_words = set(stopwords.words('english'))
+
+    def split_query(self, query):
+        # Regex pattern to match quoted text
+        quoted_pattern = r'\".*?\"'
+
+        # Find all quoted text in the query
+        quoted_texts = re.findall(quoted_pattern, query)
+
+        # Remove quoted text from the query
+        query_no_quoted = re.sub(quoted_pattern, '', query)
+
+        # Remove extra spaces
+        query_no_quoted = ' '.join(query_no_quoted.split())
+
+        return query_no_quoted, quoted_texts
 
     def tokenize(self, text):
         tokens = word_tokenize(text)
@@ -24,16 +40,29 @@ class QueryTransform:
         return stemmed_tokens
     
     def remove_punctuation(self, text):
-        no_punctuation_text = "".join([char for char in text if char not in string.punctuation])
+        # Regex to find text within quotes
+        quoted_texts = re.findall(r'\".*?\"', text)
+        
+        # Remove punctuation from non-quoted text
+        def remove_punct(match):
+            part = match.group(0)
+            if part in quoted_texts:
+                return part  # Keep quoted text as is
+            else:
+                return "".join([char for char in part if char not in string.punctuation])
+
+        # Apply the remove_punct function to each part of the text
+        no_punctuation_text = re.sub(r'[^\" ]+', remove_punct, text)
         return no_punctuation_text
 
 
 
     def process_text(self, text):
-        text = self.remove_punctuation(text)
-        print(text)
+        no_quoted_text, quoted_texts = self.split_query(text)
+        no_quoted_text = self.remove_punctuation(no_quoted_text)
+        print(no_quoted_text)
         print("--------------")
-        tokens = self.tokenize(text)
+        tokens = self.tokenize(no_quoted_text)
         print(tokens)
         print("--------------")
         tokens = self.remove_stopwords(tokens)
@@ -48,4 +77,8 @@ class QueryTransform:
         print("--------------")
         print("--------------")
 
-        return processed_text
+        # Combine processed_text and quoted_texts
+        merged_text = processed_text + " " + " ".join(quoted_texts)
+        print(merged_text)
+        
+        return merged_text
