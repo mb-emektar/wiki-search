@@ -10,22 +10,33 @@ class PyTerrierSearch:
         self.index_ref = pt.IndexRef.of(index_path)
         self.index = pt.IndexFactory.of(self.index_ref)
 
-        # BM25 modelini yükle
-        self.bm25 = pt.BatchRetrieve(self.index_ref, wmodel="BM25")
+        # BM25 modelini yükle pseduo relevance feedback ile
+        self.bm25 = pt.BatchRetrieve(self.index_ref, wmodel="BM25", controls={"qe" : "on"})
 
         # Dataset'i al ve dokümanları bir sözlük yapısında sakla
         self.dataset = pt.get_dataset(dataset_name)
         self.document_dict = {doc['docno']: doc for doc in self.dataset.get_corpus_iter()}
 
-    def search(self, query, top_k=10):
+        # Sonuçları saklamak için bir değişken
+        self.results = None
+
+    def search(self, query):
         # Transform the query
         queryTransformer = QueryTransform().process_text(query)
 
         # Sorguyu çalıştır ve sonuçları al
-        results = self.bm25.transform(queryTransformer)
+        self.results = self.bm25.transform(queryTransformer)
+        return len(self.results)  # Sonuç sayısını döndür
+
+    def get_page(self, page_number=1, page_size=10):
+        if self.results is None:
+            return []
+
+        start = (page_number - 1) * page_size
+        end = start + page_size
 
         # İlk top_k sonucu al
-        top_results = results.head(top_k)
+        top_results = self.results.iloc[start:end]
 
         # Sonuçları saklamak için bir liste oluştur
         output = []
@@ -33,7 +44,7 @@ class PyTerrierSearch:
         # Sonuçları işleyip sakla
         for _, row in top_results.iterrows():
             doc_id = row['docno']
-            doc = self.document_dict[doc_id]
+            doc = self.document_dict.get(doc_id, {'title': 'N/A', 'text': 'N/A'})
             output.append({
                 'doc_id': doc_id,
                 'title': doc['title'],
@@ -41,19 +52,3 @@ class PyTerrierSearch:
             })
 
         return output
-
-# Sınıfı kullanarak arama yapma
-if __name__ == "__main__":
-    index_path = './indices/dpr-w100-small'
-    dataset_name = "irds:dpr-w100"
-    
-    pt_search = PyTerrierSearch(index_path, dataset_name)
-    query = "Turkey is a predominantly mountainous country, and true lowland is confined to the coastal fringes."
-    
-    results = pt_search.search(query)
-    
-    # Sonuçları yazdır
-    for result in results:
-        print(f"Doc ID: {result['doc_id']}")
-        print(f"Title: {result['title']}")
-        print(f"Text: {result['text']}\n")
